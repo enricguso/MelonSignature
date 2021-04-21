@@ -1,0 +1,4 @@
+python -m venv <venv_name>
+source <venv_name>/bin/activate
+python -m pip install ipykernel
+python -m ipykernel install --user --name=<venv_name>
