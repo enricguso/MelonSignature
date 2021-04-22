@@ -6,3 +6,10 @@ python -m pip install ipykernel
 python -m ipykernel install --user --name=<venv_name>
 jupyter kernelspec list
 jupyter kernelspec uninstall <venv_name>
+
+python 3.7.4
+anaconda                  2019.10                  py37_0  
+anaconda-client           1.7.2                    py37_0  
+anaconda-navigator        1.10.0                   py37_0  
+anaconda-project          0.8.3                      py_0  
+
