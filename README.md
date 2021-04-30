@@ -25,6 +25,10 @@ Final methods:
 
 
 ```
+import essentia.standard as es
+import numpy as np
+import torch
+
 def adapt_melonInput_TensorflowPredictMusiCNN(melon_sample):
     """
     Adapts (by treating the spectrogram as an image and using Computer 
