@@ -45,7 +45,8 @@ def adapt_melonInput_TensorflowPredictMusiCNN(melon_sample):
     renormalized = torch.from_numpy(renormalized).unsqueeze(0).unsqueeze(0)
     #Oversample with pytorch   
     oversampled=torch.nn.functional.interpolate(input=renormalized, 
-                                        size=[2587,96], mode='nearest').squeeze()
+                                        size=[melon_sample.shape[0],melon_sample.shape[1]*2],
+                                        mode='nearest').squeeze()
     oversampled = oversampled.numpy()
     # Now we cut again, but with hop size of 93 frames as in default TensorflowPredictMusiCNN
     new = np.zeros((int(len(oversampled) / 93) - 1, 187, 96)).astype(np.float32)
@@ -85,5 +86,5 @@ def melspectrogram(audio):
     return np.array(result)
 ```
 
-
+Additional requirements: torch
 Local VENV: MELON_VENV
