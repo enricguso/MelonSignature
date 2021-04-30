@@ -25,7 +25,7 @@ Final methods:
 
 
 ```
-def adapt_melonInput_TensorflowPredict(melon_sample, mode):
+def adapt_melonInput_TensorflowPredict(melon_sample):
     """
     Adapts (by treating the spectrogram as an image and using Computer 
     Vision interpolation methods) the MelonPlaylist mel spectrograms to patches
@@ -36,27 +36,17 @@ def adapt_melonInput_TensorflowPredict(melon_sample, mode):
     mode: 'linear', 'nearest'  'bilinear', 'bicubic', , 'area', 'trilinear'
     Output:(batch, 187, 1, 96bands)
     """
+    #First we de-normnalize (from dB to linear):
     db2amp = es.UnaryOperator(type='db2lin', scale=2)
-    if mode == 'linear':
-        oversampled = np.zeros((len(melon_sample), melon_sample.shape[1]*2)).astype(np.float32)
-    else:
-        renormalized = np.zeros_like(melon_sample).astype(np.float32)
+    renormalized = np.zeros_like(melon_sample).astype(np.float32)
     for k in range(len(melon_sample)):
-        if mode == 'linear':
-            sample = np.log10(1 + (db2amp(melon_sample[k])*10000))
-            oversampled[k,:]=np.interp(np.arange(96)/2, np.arange(48), sample)
-        else:
-            renormalized[k,:] = np.log10(1 + (db2amp(melon_sample[k])*10000))
-    if mode != 'linear':
-        renormalized = torch.from_numpy(renormalized).unsqueeze(0).unsqueeze(0)
-        if mode == 'trilinear':
-            oversampled=torch.nn.functional.interpolate(input=renormalized.unsqueeze(0), 
-                                            size=[1,2587,96], mode=mode).squeeze()
-        else:
-            oversampled=torch.nn.functional.interpolate(input=renormalized, 
-                                        size=[2587,96], mode=mode).squeeze()
-        oversampled = oversampled.numpy()
-    
+        renormalized[k,:] = np.log10(1 + (db2amp(melon_sample[k])*10000))
+    #We add dimensions for convolution
+    renormalized = torch.from_numpy(renormalized).unsqueeze(0).unsqueeze(0)
+    #Oversample with pytorch   
+    oversampled=torch.nn.functional.interpolate(input=renormalized, 
+                                        size=[2587,96], mode='nearest').squeeze()
+    oversampled = oversampled.numpy()
     # Now we cut again, but with hop size of 93 frames as in default TensorflowPredictMusiCNN
     new = np.zeros((int(len(oversampled) / 93) - 1, 187, 96)).astype(np.float32)
     for k in range(int(len(oversampled) / 93) - 1):
