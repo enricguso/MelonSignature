@@ -25,7 +25,7 @@ Final methods:
 
 
 ```
-def adapt_melonInput_TensorflowPredict(melon_sample):
+def adapt_melonInput_TensorflowPredictMusiCNN(melon_sample):
     """
     Adapts (by treating the spectrogram as an image and using Computer 
     Vision interpolation methods) the MelonPlaylist mel spectrograms to patches
