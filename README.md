@@ -89,7 +89,25 @@ def melspectrogram(audio):
         result.append(amp2db(melFrame))
     return np.array(result)
 ```
+Now we can feed it to TensorFlowPredict:
+```
+#Simulate a MelonPlaylist arena_mel file:
+loader = es.MonoLoader(filename='576120.mp3')
+audio = loader()
+melon_sample = melspectrogram(audio)
+adapted_sample = adapt_melonInput_TensorflowPredictMusiCNN(melon_sample)
 
+modelName='msd-musicnn-1.pb'
+output_layer='model/dense/BiasAdd'
+input_layer='model/Placeholder'
+predict = es.TensorflowPredict(graphFilename=modelName,
+                               inputs=[input_layer],
+                               outputs=[output_layer])
+in_pool = Pool()
+in_pool.set('model/Placeholder', adapt_melonInput_TensorflowPredictMusiCNN(adapted_sample))
+output = predict(in_pool)
+embedding = output['model/dense/BiasAdd'][:,0,0,:]
+```
 Additional requirements: torch
 
 Local VENV: MELON_VENV
