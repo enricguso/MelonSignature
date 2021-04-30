@@ -6,11 +6,94 @@ Interpolation.ipynb:
 * Measures the impact of using MelonPlaylist melScale signature when computing Essentia-tensorflow embeddings instead of audio (which is unavailable due to copyright) in a genre classification task on GTZAN.
 
 
-| Model        | Loss           | Accuracy  |
-| ------------- |:-------------:| -----:|
-| Random embeddings      | 2.31 | 8.07% |
-| Random musiCNN      | 1.88 | 40,58% |
-| musiCNN waveform      |    0.67   |   80.50% |
-| musiCNN melonMEL | 0.92      |    74.57% |
+    | Model        | Loss           | GTZAN accuracy  |
+    | ------------- |:-------------:| -----:|
+    | Random embeddings      | 2.31 | 9.37% |
+    | Random musiCNN      | 1.88 | 40,58% |
+    | musiCNN waveform      |    0.67   |   80.50% |
+    | musiCNN linear interpolation | 0.92      |    74.57% |
+    | <strong>musiCNN nearest interpolation</strong> | <strong>0.87    </strong>  |  <strong>  77.28% </strong>|
+    | musiCNN bilinear interpolation | 1.09     |    69.30% |
+    | musiCNN bicubic interpolation |   0.94   |    72.83% |
+    | musiCNN bicubic aligned_corners |   0.95   |    74.23% |
+    | musiCNN area interpolation |      0.97 |    75.04% |
+    | musiCNN trilinear interpolation |  1.04     |    70.40% |
+    | musiCNN MEL_to_audio librosa |  2.58     |    18.75% |
+    | musiCNN MEL_to_STFT librosa |    1.30   |    63.41% |
 
-VENV: MELON_VENV
+Final methods:
+
+
+```
+def adapt_melonInput_TensorflowPredict(melon_sample, mode):
+    """
+    Adapts (by treating the spectrogram as an image and using Computer 
+    Vision interpolation methods) the MelonPlaylist mel spectrograms to patches
+    suitable for using the Essentia-Tensorflow TensorflowPredict algorithm.
+
+    Input:
+    melon_samples (frames, 48bands) dtype=np.float32
+    mode: 'linear', 'nearest'  'bilinear', 'bicubic', , 'area', 'trilinear'
+    Output:(batch, 187, 1, 96bands)
+    """
+    db2amp = es.UnaryOperator(type='db2lin', scale=2)
+    if mode == 'linear':
+        oversampled = np.zeros((len(melon_sample), melon_sample.shape[1]*2)).astype(np.float32)
+    else:
+        renormalized = np.zeros_like(melon_sample).astype(np.float32)
+    for k in range(len(melon_sample)):
+        if mode == 'linear':
+            sample = np.log10(1 + (db2amp(melon_sample[k])*10000))
+            oversampled[k,:]=np.interp(np.arange(96)/2, np.arange(48), sample)
+        else:
+            renormalized[k,:] = np.log10(1 + (db2amp(melon_sample[k])*10000))
+    if mode != 'linear':
+        renormalized = torch.from_numpy(renormalized).unsqueeze(0).unsqueeze(0)
+        if mode == 'trilinear':
+            oversampled=torch.nn.functional.interpolate(input=renormalized.unsqueeze(0), 
+                                            size=[1,2587,96], mode=mode).squeeze()
+        else:
+            oversampled=torch.nn.functional.interpolate(input=renormalized, 
+                                        size=[2587,96], mode=mode).squeeze()
+        oversampled = oversampled.numpy()
+    
+    # Now we cut again, but with hop size of 93 frames as in default TensorflowPredictMusiCNN
+    new = np.zeros((int(len(oversampled) / 93) - 1, 187, 96)).astype(np.float32)
+    for k in range(int(len(oversampled) / 93) - 1):
+        new[k]=oversampled[k*93:k*93+187]
+    return np.expand_dims(new, 2)
+```
+
+```
+def melspectrogram(audio):
+    """
+    From a 16kH sample, computes the mel spectrogram with the same signature as done in MelonPlaylist dataset.
+    
+    Input:
+    audio (samples) sampled at 16kHz and between [-1,1], dtype=np.float32
+    Output:(frames, 48bands)
+    """    
+    windowing = es.Windowing(type='hann', normalized=False, zeroPadding=0)
+    spectrum = es.Spectrum()
+    melbands = es.MelBands(numberBands=48,
+                                   sampleRate=16000,
+                                   lowFrequencyBound=0,
+                                   highFrequencyBound=16000/2,
+                                   inputSize=(512+0)//2+1,
+                                   weighting='linear',
+                                   normalize='unit_tri',
+                                   warpingFormula='slaneyMel',
+                                   type='power')
+    amp2db = es.UnaryOperator(type='lin2db', scale=2)
+    result = []
+    for frame in es.FrameGenerator(audio, frameSize=512, hopSize=256,
+                                   startFromZero=False):
+        spectrumFrame = spectrum(windowing(frame))
+
+        melFrame = melbands(spectrumFrame)
+        result.append(amp2db(melFrame))
+    return np.array(result)
+```
+
+
+Local VENV: MELON_VENV
