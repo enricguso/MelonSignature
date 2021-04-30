@@ -3,7 +3,7 @@ Melonplaylist MelScale signature.ipynb:
 * Finds exact mel spectrogram signature from MelonPlaylist mel files.
 
 Interpolation.ipynb:
-* Measures the impact of using MelonPlaylist melScale signature when computing Essentia-tensorflow embeddings instead of audio (which is unavailable due to copyright) in a genre classification task on GTZAN.
+* Measures the impact of using MelonPlaylist melScale signature when computing Essentia-tensorflow embeddings instead of waveforms (which is unavailable due to copyright) in a genre classification task on GTZAN.
 
 
     | Model        | Loss           | GTZAN accuracy  |
